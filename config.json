@@ -1,0 +1,52 @@
+{
+    "host": "192.168.10.4",
+    "user": "JMfz4SkDIvUBgCzaLcsIKSeoWVoNouTI-jSityAe",
+    "rooms": [
+    {
+        "name": "Home",
+        "default-color": "read",
+        "spans": [
+        {
+            "from": "06:00",
+            "to": "10:00",
+            "color": "energize"
+        },
+        {
+            "from": "18:00",
+            "to": "06:00",
+            "color": "sleep"
+        }]
+    },
+    {
+        "name": "Living room",
+        "default-color": "read",
+        "spans": [
+        {
+            "from": "18:00",
+            "to": "06:00",
+            "color": "watchTV"
+        }]
+    }],
+
+    "colors":
+    {
+        "read":
+        {
+            "ct": 343,
+            "bri": 254
+        },
+        "energize":
+        {
+            "ct": 343
+        },
+        "sleep":
+        {
+            "ct": 343
+        },
+        "watchTV":
+        {
+            "ct": 443,
+            "bri": 238
+        }
+    }
+}
