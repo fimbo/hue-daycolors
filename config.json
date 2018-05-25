@@ -4,31 +4,31 @@
     "rooms": [
     {
         "name": "Home",
-        "default-color": "read",
+        "default-profile": "read",
         "spans": [
         {
             "from": "06:00",
             "to": "10:00",
-            "color": "energize"
+            "profile": "energize"
         },
         {
             "from": "18:00",
-            "to": "06:00",
-            "color": "sleep"
+            "to": "23:59",
+            "profile": "sleep"
         }]
     },
     {
         "name": "Living room",
-        "default-color": "read",
+        "default-profile": "read",
         "spans": [
         {
             "from": "18:00",
-            "to": "06:00",
-            "color": "watchTV"
+            "to": "23:59",
+            "profile": "watchTV"
         }]
     }],
 
-    "colors":
+    "profiles":
     {
         "read":
         {

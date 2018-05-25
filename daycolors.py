@@ -2,6 +2,8 @@ import time
 import json
 from beautifulhue.api import Bridge
 from pprint import pprint
+import hue
+from hue import Room, Lamp, LampState
 
 def readConfiguration():
 	print "reading configuration"
@@ -9,58 +11,46 @@ def readConfiguration():
 		config = json.load(configfile)
 	return config
 
-def run():
+def run(bridge):
+	rooms = hue.readRooms(bridge)
 	while (True):
-		print "checking rooms"
-		groups = bridge.group.get({'which':'all'})
-		for group in groups["resource"]:
-			config = getGroupConfig(group)
-			if(config):
-				checkGroup(group, config)
-
+		for room in rooms:
+			print u"checking room {}".format(room.getName())
+			room.readState(bridge)
+			if room.isOn():
+				print "> lights are on"
+				groupConfig = getRoomConfig(room.getName())
+				targetProfile = getTargetProfile(groupConfig, time.time())
+				targetState = translateProfileString(targetProfile)
+				print "> expecting state of {} to be {}".format(room, targetState)
+				for lamp in room.lamps:
+					lamp.readState(bridge)
+					print "> checking lamp {}".format(lamp)
+					if not lamp.isOn:
+						print "> lamp is off"
+						return
+					if not lamp.meets(targetState):
+						if lamp.status == LampState.MANUALLY_CHANGED:
+							print "> state is changed manually, leaving as is"
+						else:
+							print "> adjusting"
+							lamp.applyState(bridge, targetState)
 		time.sleep(2)
 
-def checkGroup(group, groupConfig):
-	colorString = getTargetColor(groupConfig, time.time())
-	color = translateColorString(colorString)
-	print "checking group " + group["name"] + " to be " + colorString;
-
-	if group["state"]["any_on"] == "False":
-		print "lights are off"
-		return
-
-	for lightNb in group["lights"]:
-		checkLight(lightNb, color)
-
-
-def checkLight(lightNb, color):
-	resource = {'which': int(lightNb)}
-	light = bridge.light.get(resource)
-	state = light["resource"]["state"];
-	if color != { "bri": state["bri"], "ct":state["ct"]} :
-		resource = {
-		    'which': int(lightNb),
-		    'data':{'state': color}
-		}
-		
-		print "setting light {} to {}".format(lightNb,color)
-		bridge.light.update(resource)
-
-def getGroupConfig(group):
-	groupname = group["name"]
-	for roomconfig in  config["rooms"]:
-		if roomconfig["name"] == group["name"]:
+def getRoomConfig(groupname):
+	for roomconfig in config["rooms"]:
+		if roomconfig["name"] == groupname:
 			return roomconfig
 
-def getTargetColor(groupConfig, now):
-	color = groupConfig["default-color"];
+def getTargetProfile(groupConfig, now):
+	profile = groupConfig["default-profile"];
 	for span in groupConfig["spans"]:
 		if isBetween(now, time.strptime(span["from"],"%H:%M"), time.strptime(span["to"],"%H:%M")):
-			color = span["color"]
-	return color
+			profile = span["profile"]
+	return profile
 
-def translateColorString(colorString):
-	return config["colors"][colorString]
+def translateProfileString(profile):
+	return config["profiles"][profile]
 
 def isBetween(now, start, end):
     if start <= end:
@@ -71,22 +61,7 @@ def isBetween(now, start, end):
 def isUserDefined():
 	return config["user"] != ""
 
-def connect():
-	if not isUserDefined():
-		print "please press the button on your hue bridge"
-
-	while not isUserDefined():
-		#read auth
-		time.sleep(1)
-
-	print "using user " + config["user"]
-
-def adjustColors():
-	pass
-
-
 config = readConfiguration()
 pprint(config)
-connect()
-bridge = Bridge(device={'ip':config["host"]}, user={"name":config["user"]})
-run()
+bridge = hue.connect(config)
+run(bridge)
