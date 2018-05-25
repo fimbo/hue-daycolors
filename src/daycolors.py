@@ -4,10 +4,14 @@ from beautifulhue.api import Bridge
 from pprint import pprint
 import hue
 from hue import Room, Lamp, LampState
+import sys
 
 def readConfiguration():
-	print "reading configuration"
-	with open("config.json", "r") as configfile:
+	print "reading configuraton"
+	for str in sys.argv:
+		print str
+	filename = sys.argv[1]
+	with open(filename, "r") as configfile:
 		config = json.load(configfile)
 	return config
 
