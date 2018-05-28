@@ -5,11 +5,11 @@ RUN pip install beautifulhue Enum
 ENV progdir /hue-daycolors
 WORKDIR ${progdir}
 
-ADD src ${progdir}/src
-add run.sh ${progdir}/run.sh
+ADD src ./src
+add run.sh ./run.sh
 
-VOLUME ${progdir}/config
+VOLUME ./config
 
-RUN chmod 777 ${progdir}/run.sh
+RUN chmod 777 ./run.sh
 
-CMD  cd ${progdir} && ./run.sh
+CMD ./run.sh
