@@ -2,19 +2,16 @@
 from beautifulhue.api import Bridge
 from enum import Enum
 
-def connect(config):
-	user = config["user"]
+def connect(host, user):
 	if not user:
 		print "please press the button on your hue bridge"
-		while not config["user"]:
-			#read auth
-			time.sleep(1)
+		time.sleep(2)
 
-	print "using user " + user
-	return Bridge(device={'ip':config["host"]}, user={"name":user})
+	bridge = Bridge(device={'ip':host}, user={"name":user})
+	return (user, bridge)
 
 
-def readRooms(bridge):
+def readRooms(bridge, lampStatusListener):
 		groups = bridge.group.get({'which':'all'})
 		rooms = []
 		for group in groups["resource"]:
@@ -22,7 +19,7 @@ def readRooms(bridge):
 			rooms.append(room)
 			lamps = []
 			for lightNb in group["lights"]:
-				lamp = Lamp(lightNb)
+				lamp = Lamp(lightNb, lampStatusListener)
 				lamp.readState(bridge)
 				lamps.append(lamp)
 				room.lamps = lamps
@@ -39,7 +36,7 @@ class Room:
 		self.group = bridge.group.get({'which':self.id})["resource"]
 		if not self.isOn():
 			for lamp in self.lamps:
-				lamp.status = LampState.UNKNOWN
+				lamp.setStatus(LampState.initialStatus)
 		
 	def getName(self):
 		return self.group["name"]
@@ -51,42 +48,35 @@ class Room:
 		return self.getName()
 
 
-class LampState(Enum):
-	UNKNOWN=0
-	ADJUSTED=1
-	MANUALLY_CHANGED=2
-
 class Lamp:
-	def __init__(self, id):
+	def __init__(self, id, statusListener):
 		self.id = id  
 		self.state = "unknown"
-		self.status = LampState.UNKNOWN
+		self.targetState = "unknown"
+		self.statusListener = statusListener
+		self._status = LampState.initialStatus;
 
 	def readState(self, bridge):
 		resource = self.createRessource()
 		light = bridge.light.get(resource)
 		self.state = light["resource"]["state"]
-		if not self.isOn():
-			self.status = LampState.UNKNOWN
+		self._status(self)
 
 	def isOn(self):
 		return self.state["on"]
 
-	def meets(self, expectedState):
-		matching = True
+	def getUnmetProperties(self, expectedState):
+		misses = []
 		for property in expectedState:
-			if not self.state[property] or not self.state[property] == expectedState[property]:
-				matching = False
-				print "> property {} should be {} but is {}".format(property,expectedState[property], self.state[property])
+			if not self.state[property] == expectedState[property]:
+				misses = misses + [{ 'property': property, 'expected' :expectedState[property], 'actual' : self.state[property]}]
+		return misses
 
-		if matching:
-			if not self.status == LampState.ADJUSTED:
-				self.status = LampState.ADJUSTED
-		else:
-			if self.status == LampState.ADJUSTED:
-				self.status = LampState.MANUALLY_CHANGED
+	def meetsTarget(self):
+		return self.meets(self.targetState)
 
-		return matching
+	def meets(self, expectedState):
+		return len(self.getUnmetProperties(expectedState)) == 0
 
 	def applyState(self, bridge, state):
 		ressource = self.createRessource() # create builder
@@ -107,7 +97,48 @@ class Lamp:
 		return ressource
 	
 	def __str__(self):
-		return "{} ({})".format(self.id, self.status) 
+		if self._status:
+		  statusName = self._status.__name__
+		else:
+		  statusName = "n/a"
 
+		return "{} ({})".format(self.id, statusName) 
 
+	def setStatus(self, status):
+		if self._status == status:
+			return
+		self.statusListener(self, status.__name__)
+		self._status = status
+
+######### lampstates #########
+
+class LampState:
+
+	@staticmethod
+	def initialStatus(lamp):
+		if not lamp.isOn():
+			return
+
+		if lamp.targetState == "unknown":
+			return
+
+		if lamp.meetsTarget():
+			lamp.setStatus(LampState.adjustedStatus)
+
+	@staticmethod
+	def adjustedStatus(lamp):
+		if not lamp.isOn():
+			lamp.setStatus(LampState.initialStatus)
+
+		if lamp.meetsTarget():
+			return
+		else:
+			lamp.setStatus(LampState.manuallyChangedStatus)
+
+	@staticmethod
+	def manuallyChangedStatus(lamp):
+		if not lamp.isOn():
+			lamp.setStatus(LampState.initialStatus)
+
+		
 
