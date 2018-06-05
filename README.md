@@ -22,7 +22,7 @@ or
 - define the timespans for your rooms with the active profile
 
 ### Example
-```
+```json
     "host": "192.168.10.4",
     "user": "JMfz4SkDIvUBgCzaLcsIKSeoWVoNouTI-jSityAe",
     "profiles":
