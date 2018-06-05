@@ -1,9 +1,4 @@
-# H1 hue-daycolors
-<<<<<<< HEAD
-======
-
-=======
-
+# hue-daycolors
 ## Installation
 1. install python 2.7 [Python BeginnersGuide](https://wiki.python.org/moin/BeginnersGuide/Download)
 2. adapt the config **config/config.json** to your needs 
