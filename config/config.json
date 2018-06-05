@@ -26,6 +26,16 @@
             "to": "23:59",
             "profile": "watchTV"
         }]
+    },
+    {
+        "name": "Büro",
+        "default-profile": "energize",
+        "spans": [
+        {
+            "from": "18:00",
+            "to": "23:59",
+            "profile": "read"
+        }]
     }],
 
     "profiles":

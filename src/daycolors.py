@@ -36,42 +36,64 @@ def run(bridge):
 			room.readState(bridge)
 			if room.isOn():
 				logger.debug("> lights are on")
-				groupConfig = assembleRoomConfig(room.getName())
-				targetProfile = getTargetProfile(groupConfig, time.time())
-				targetState = translateProfileString(targetProfile)
-				logger.debug("> using roomconfig {}".format(groupConfig))
-				logger.debug(u"> expecting state of {} to be {}".format(room, targetState))
-				for lamp in room.lamps:
-					lamp.targetState = targetState
-					logger.debug("> checking lamp {}".format(lamp))
-					lamp.readState(bridge)
-					if not lamp.isOn:
-						logger.debug("> lamp is off")
-						return
-					if lamp._status != LampState.manuallyChangedStatus and lamp._status != LampState.adjustedStatus:
-						logger.info("> adjusting")
-						lamp.applyState(bridge, targetState)
+				timestamp = time.time()
+				targetProfile = getTargetProfile(room.getName(), timestamp)
+
+				if not targetProfile:
+					logger.debug(u"> no targetState defined for room {} at {}".format(room, timestamp))
+				else:
+					targetState = translateProfileString(targetProfile)
+					logger.debug(u"> expecting state of {} to be {}".format(room, targetState))
+					for lamp in room.lamps:
+						lamp.targetState = targetState
+						logger.debug("> checking lamp {}".format(lamp))
+						lamp.readState(bridge)
+						if not lamp.isOn:
+							logger.debug("> lamp is off")
+							return
+						if lamp._status != LampState.manuallyChangedStatus and lamp._status != LampState.adjustedStatus:
+							logger.info("> adjusting")
+							lamp.applyState(bridge, targetState)
 		time.sleep(2)
 
 
-def assembleRoomConfig(groupname):
-	ret = getRoomConfig("Home")
+def getTargetProfile(groupname, time):
+	homeconfig = getRoomConfig("Home")
 	roomconfig = getRoomConfig(groupname)
+	profile = None
+
+	if homeconfig:
+		profile = takeIfDefined(homeconfig["default-profile"], profile)
+
 	if roomconfig:
-		ret.update(roomconfig)
-	return ret
+		profile = takeIfDefined(roomconfig["default-profile"], profile)
+
+	if homeconfig:
+		profile = takeIfDefined(getProfileAtTime(homeconfig, time), profile)
+
+	if roomconfig:
+		profile = takeIfDefined(getProfileAtTime(roomconfig, time), profile)
+
+	return profile
+
+def takeIfDefined(candidate, default):
+	if candidate:
+		return candidate
+	return default
+
+def getProfileAtTime(groupConfig, timestamp):
+	profile = None
+	for span in groupConfig["spans"]:
+		if isBetween(timestamp, time.strptime(span["from"],"%H:%M"), time.strptime(span["to"],"%H:%M")):
+			profile = span["profile"]  # take last one
+
+	return profile
 
 def getRoomConfig(groupname):
 	for roomconfig in config["rooms"]:
 		if roomconfig["name"] == groupname:
 			return roomconfig;
 
-def getTargetProfile(groupConfig, now):
-	profile = groupConfig["default-profile"];
-	for span in groupConfig["spans"]:
-		if isBetween(now, time.strptime(span["from"],"%H:%M"), time.strptime(span["to"],"%H:%M")):
-			profile = span["profile"]
-	return profile
 
 def translateProfileString(profile):
 	return config["profiles"][profile]
