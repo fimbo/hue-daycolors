@@ -1,4 +1,5 @@
-import time
+from datetime import datetime
+from time import sleep
 import json
 from beautifulhue.api import Bridge
 import hue
@@ -36,14 +37,14 @@ def run(bridge):
 			room.readState(bridge)
 			if room.isOn():
 				logger.debug("> lights are on")
-				timestamp = time.time()
+				timestamp = datetime.now().time()
 				targetProfile = getTargetProfile(room.getName(), timestamp)
 
 				if not targetProfile:
 					logger.debug(u"> no targetState defined for room {} at {}".format(room, timestamp))
 				else:
 					targetState = translateProfileString(targetProfile)
-					logger.debug(u"> expecting state of {} to be {}".format(room, targetState))
+					logger.debug(u"> expecting state of {} to be {} {}".format(room, targetProfile ,targetState))
 					for lamp in room.lamps:
 						lamp.targetState = targetState
 						logger.debug("> checking lamp {}".format(lamp))
@@ -54,7 +55,7 @@ def run(bridge):
 						if lamp._status != LampState.manuallyChangedStatus and lamp._status != LampState.adjustedStatus:
 							logger.info("> adjusting")
 							lamp.applyState(bridge, targetState)
-		time.sleep(2)
+		sleep(2)
 
 
 def getTargetProfile(groupname, time):
@@ -84,7 +85,7 @@ def takeIfDefined(candidate, default):
 def getProfileAtTime(groupConfig, timestamp):
 	profile = None
 	for span in groupConfig["spans"]:
-		if isBetween(timestamp, time.strptime(span["from"],"%H:%M"), time.strptime(span["to"],"%H:%M")):
+		if isBetween(timestamp, datetime.strptime(span["from"],"%H:%M").time(), time.strptime(span["to"],"%H:%M").time()):
 			profile = span["profile"]  # take last one
 
 	return profile
@@ -100,7 +101,7 @@ def translateProfileString(profile):
 
 def isBetween(now, start, end):
     if start <= end:
-        return start <= now < end
+        return start <= now and now < end
     else: # over midnight e.g., 23:30-04:15
         return start <= now or now < end
 
