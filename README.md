@@ -12,7 +12,7 @@ alternatively run the docker-image [fimbo/hue-daycolors](https://hub.docker.com/
 ## Run Container
 either run `./docker-run.sh`
 or
-`docker run -it -v $(pwd)/config:/hue-daycolors/config hue-daycolors:latest`
+`docker run -it -v $(pwd)/config:/hue-daycolors/config fimbo/hue-daycolors:latest`
 
 ## Configuration
 
